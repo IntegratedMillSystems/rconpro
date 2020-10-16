@@ -2,10 +2,11 @@ import socket
 from struct import *
 import threading
 
-class PyPLCException(Exception):
+# Custom Exceptions
+class PyConProException(Exception):
     ...
 
-class CommError(PyPLCException):
+class CommError(PyConProException):
     ...
 
 from .socket_ import SetupSocket, CPSocket
@@ -14,7 +15,18 @@ from .consumer import Consumer, ConsumerHint
 # from .producer import Producer
 
 class Connection(object):
+    """
+    Manages sockets and serves Consumer instances data.
+    Acts as a parent to PLC class instances (a connection
+    can get data from multiple PLCs).
+    """
+
     def __init__(self):
+        """
+        Initiates Connection class by setting up sockets
+        and initiating other variables.
+        """
+
         self.setupSocket = SetupSocket()
         self.CPSocket = CPSocket()
         self.PLCs = []
@@ -22,6 +34,11 @@ class Connection(object):
         self.SequenceCount = 0
     
     def addPLC(self, ip, shot=0):
+        """
+        Initiates a PLC instance, registers our socket with
+        the actual PLC over the network, and saves it to a list.
+        """
+
         plc = PLC(self, ip, shot)
         plc.register()
 
@@ -29,6 +46,11 @@ class Connection(object):
         return plc
     
     def Start(self, join=False):
+        """
+        Start the connection by binding the receiving socket
+        and starting the receiving thread.
+        """
+
         self.CPSocket.bind()
 
         # Start thread
@@ -39,9 +61,19 @@ class Connection(object):
             self.thread.join()
     
     def Join(self):
+        """
+        Join the receiving thread.
+        """
+
         self.thread.join()
 
     def connection_thread(self):
+        """
+        The receiving thread, to be run by self.Start.
+        Listens for incomming packets and then sends them to
+        the appropriate Consumer instance (TODO).
+        """
+
         while True:
             try:
                 data = self.CPSocket.receive(1024)
@@ -54,5 +86,9 @@ class Connection(object):
                 print(e)
 
     def Close(self):
+        """
+        Closes the sockets
+        """
+
         self.setupSocket.close()
         self.CPSocket.close()

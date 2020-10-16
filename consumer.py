@@ -8,12 +8,27 @@ from pycomm3 import LogixDriver
 from . import CommError
 
 class ConsumerHint(NamedTuple):
+    """
+    Hint for the Consumer
+    """
+
     tag: str
+    datasize: int
     rpi: int
     otrpi: int
 
 class Consumer:
+    """
+    Registers a forward open with a PLC, keeps the connection
+    open, and receives data from the Connection instance.
+    """
+
     def __init__(self, plc, hint, handler):
+        """
+        Initiates Consumer by initiating variables and checking
+        types.
+        """
+
         self.plc = plc
         self._handler = handler
 
@@ -21,12 +36,18 @@ class Consumer:
             raise TypeError("hint must be of type ConnectionHint")
         self.hint = hint
 
-        self.DataSize = 6
-
     def getTagSize(self):
+        """
+        Gets the size of the tag. May not be implemented.
+        """
+
         ...
     
     def forwardOpen(self):
+        """
+        Registers a forward open with the given plc.
+        """
+
         # Send Forward Open to producer
         self.plc.connection.setupSocket.send(self._buildForwardOpenPacket())
         
@@ -44,6 +65,7 @@ class Consumer:
         """
         Assemble the forward open packet
         """
+
         forwardOpen = self._buildCIPForwardOpen()
         rrDataHeader = self._buildEIPSendRRDataHeader(len(forwardOpen))
         return rrDataHeader+forwardOpen
@@ -52,6 +74,7 @@ class Consumer:
         """
         Build the EIP Send RR Data Header
         """
+
         EIPCommand = 0x6F
         EIPLength = 16+frameLen
         EIPSessionHandle = self.plc.SessionHandle
@@ -87,6 +110,7 @@ class Consumer:
         Forward Open happens after a connection is made,
         this will sequp the CIP connection parameters
         """
+
         CIPPathSize = 0x02
         CIPClassType = 0x20
 
@@ -115,7 +139,7 @@ class Consumer:
         pack_format = '<BBBBBBBBIIHHIIIHIHB'
 
         CIPOTNetworkConnectionParameters = CIPConnectionParameters
-        CIPTONetworkConnectionParameters = 0x4800+self.DataSize
+        CIPTONetworkConnectionParameters = 0x4800+self.hint.datasize
 
         ForwardOpen = pack(pack_format,
                            CIPService,
@@ -187,6 +211,7 @@ class Consumer:
         We also might be reading arrays, a bool from arrays (atomic), strings.
             Oh and multi-dim arrays, program scope tags...
         """
+
         ioi = b""
         tagArray = tagName.split(".")
 
@@ -246,6 +271,10 @@ class Consumer:
         return ioi
 
     def Start(self):
+        """
+        Start the thread keeping the connection alive. Everything
+        else after this should be passive.
+        """
         self.keepAlive = LoopThread(self.hint.otrpi, self._askForData, daemon=True)
         self.keepAlive.start()
 
@@ -253,6 +282,7 @@ class Consumer:
         """
         Send keep alive packets to producer
         """
+
         packet = self._response_packet()
         self.plc.connection.SequenceCount += 1
         self.plc.connection.CPSocket.sendto(packet, (self.plc.ip, 2222))
@@ -261,6 +291,7 @@ class Consumer:
         """
         Build the response packet
         """
+
         item_count = 0x02
         type_id = 0x8002
         length = 0x08
@@ -283,13 +314,18 @@ class Consumer:
         return payload
 
     def handle(self, data):
+        """
+        Parse the data and send it to the handler function
+        """
+
         self._handler(data)
 
 def _parseTagName(tag, offset):
     """
-    parse the packet to get the base tag name
+    Parse the packet to get the base tag name
     the offset is so that we can increment the array pointer if need be
     """
+
     bt = tag
     ind = 0
     try:
@@ -315,7 +351,15 @@ def _parseTagName(tag, offset):
         return tag, bt, 0
 
 class LoopThread(object):
+    """
+    Runs a function every RPI milliseconds using threading.Timer
+    """
+
     def __init__ (self, RPI, function, daemon=False):
+        """
+        Initiates variables
+        """
+
         self._timer = None
         self.RPI = RPI * 0.001
         self.function = function
@@ -324,11 +368,18 @@ class LoopThread(object):
         self.is_running = False
 
     def _run(self):
+        """
+        Run the function and start the timer again.
+        """
         self.is_running = False
         self.start()
         self.function()
 
     def start(self):
+        """
+        Start the timer
+        """
+
         if not self.is_running:
             self._timer = Timer(self.RPI, self._run)
             self._timer.daemon = self.daemon
@@ -337,5 +388,9 @@ class LoopThread(object):
             self.is_running = True
         
     def stop(self):
+        """
+        Stop the current timer and create no more.
+        """
+
         self._timer.cancel()
         self.is_running = False

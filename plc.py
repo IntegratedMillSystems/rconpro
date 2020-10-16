@@ -4,7 +4,16 @@ from . import CommError
 from .consumer import Consumer
 
 class PLC:
+    """
+    Registers a session with the given PLC and acts as the parent
+    of the Consumer connections to that PLC.
+    """
+
     def __init__(self, connection, ip, slot):
+        """
+        Initiate variables
+        """
+
         self.connection = connection
 
         self.ip = ip
@@ -16,6 +25,10 @@ class PLC:
         self.SessionHandle = 0
     
     def register(self):
+        """
+        Register the session with the given PLC
+        """
+
         # Register the connection
         self.connection.setupSocket.connect(self.ip)
         self.connection.setupSocket.send(self._buildRegisterSession())
@@ -32,6 +45,7 @@ class PLC:
         """
         Build the packet to register the CIP connection
         """
+
         EIPCommand = 0x0065
         EIPLength = 0x0004
         EIPSessionHandle = 0x00
@@ -53,6 +67,11 @@ class PLC:
                     EIPOptionFlag)
 
     def addConsumer(self, hint, handler):
+        """
+        Initiate a Consumer instance, register a forward
+        open, and save the instance to a list.
+        """
+
         con = Consumer(self, hint, handler)
         con.forwardOpen()
 

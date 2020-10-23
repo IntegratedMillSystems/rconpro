@@ -3,8 +3,6 @@ from random import randrange
 from typing import NamedTuple
 from threading import Timer
 
-from pycomm3 import LogixDriver
-
 from . import CommError
 
 class ConsumerHint(NamedTuple):
@@ -57,7 +55,7 @@ class Consumer:
         sts = unpack_from('<b', forward_open_response, 42)[0]
         if not sts:
             self.OTConnectionID = unpack_from('<I', forward_open_response, 44)[0]
-            print(self.OTConnectionID)
+            self.TOConnectionID = unpack_from('<I', forward_open_response, 48)[0] # Get ID for Connection instance to check
         else:
             raise CommError('Forward open failed')
     
@@ -257,6 +255,7 @@ class Consumer:
                     the read request as a UDT, just read the value of the DINT.  We'll figure out
                     the individual bit in the read function.
                 """
+
                 try:
                     if int(tagArray[i]) <= 31:
                         pass
@@ -275,6 +274,7 @@ class Consumer:
         Start the thread keeping the connection alive. Everything
         else after this should be passive.
         """
+
         self.keepAlive = LoopThread(self.hint.otrpi, self._askForData, daemon=True)
         self.keepAlive.start()
 

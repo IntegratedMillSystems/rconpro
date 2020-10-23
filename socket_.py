@@ -1,8 +1,10 @@
 import socket
-from . import CommError
 import struct
 
 HEADER_SIZE = 24
+
+class SocketError(Exception):
+    ...
 
 class Socket(object):
     """
@@ -30,10 +32,10 @@ class Socket(object):
             try:
                 sent = self.sock.send(msg[total_sent:])
                 if sent == 0:
-                    raise CommError("Socket connection broken.")
+                    raise SocketError("Socket connection broken.")
                 total_sent += sent
             except socket.error:
-                raise CommError("Socket connection broken.")
+                raise SocketError("Socket connection broken.")
         return total_sent
 
     def receiveAll(self, bytelen, timeout=0):
@@ -52,7 +54,7 @@ class Socket(object):
 
             return data
         except socket.error as err:
-            raise CommError(err)
+            raise SocketError(err)
     
     def receive(self, bytelen, timeout=0):
         """
@@ -65,7 +67,7 @@ class Socket(object):
             data = self.sock.recv(bytelen)
             return data
         except socket.error as err:
-            raise CommError(err)
+            raise SocketError(err)
 
     def close(self):
         self.sock.close()
@@ -83,7 +85,7 @@ class SetupSocket(Socket):
         try:
             self.sock.connect((host, 44818))
         except socket.timeout:
-            raise CommError("Socket timeout during connection.")
+            raise SocketError("Socket timeout during connection.")
 
 class CPSocket(Socket):
     """

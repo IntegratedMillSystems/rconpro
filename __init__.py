@@ -2,11 +2,8 @@ import socket
 from struct import *
 import threading
 
-# Custom Exceptions
-class PyConProException(Exception):
-    ...
-
-class CommError(PyConProException):
+# Custom Exception
+class CommError(Exception):
     ...
 
 from .socket_ import SetupSocket, CPSocket
@@ -14,7 +11,7 @@ from .plc import PLC
 from .consumer import Consumer, ConsumerHint
 # from .producer import Producer
 
-class Connection(object):
+class Connection:
     """
     Manages sockets and serves Consumer instances data.
     Acts as a parent to PLC class instances (a connection
@@ -54,7 +51,7 @@ class Connection(object):
         self.CPSocket.bind()
 
         # Start thread
-        self.thread = threading.Thread(target=self.connection_thread)
+        self.thread = threading.Thread(target=self.connection_thread, daemon=True)
         self.thread.start()
 
         if join:
@@ -71,14 +68,23 @@ class Connection(object):
         """
         The receiving thread, to be run by self.Start.
         Listens for incomming packets and then sends them to
-        the appropriate Consumer instance (TODO).
+        the appropriate Consumer instance.
         """
 
         while True:
             try:
+                # Receive data
                 data = self.CPSocket.receive(1024)
-                print(data)
-                # TODO: Send to consumer instances
+                
+                # Get ID and find the correct consumer
+                connectionID = unpack_from('<I', data, 6)[0]
+
+                for plc in self.PLCs:
+                    for con in plc.Consumers:
+                        if con.TOConnectionID == connectionID:
+
+                            # Send the data to the handler
+                            con.handle( data[20:] )
 
             except KeyboardInterrupt:
                 break

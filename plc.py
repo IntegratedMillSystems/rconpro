@@ -37,7 +37,6 @@ class PLC:
         # Handle response
         if reg_response:
             self.SessionHandle = unpack_from('<I', reg_response, 4)[0]
-            print("Session Handle: ", self.SessionHandle)
         else:
             raise CommError('Register session failed')
     

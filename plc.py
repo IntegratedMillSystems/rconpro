@@ -65,13 +65,13 @@ class PLC:
                     EIPProtocolVersion,
                     EIPOptionFlag)
 
-    def addConsumer(self, hint, handler):
+    def addConsumer(self, hint, handler, args=(), kwargs={}):
         """
         Initiate a Consumer instance, register a forward
         open, and save the instance to a list.
         """
 
-        con = Consumer(self, hint, handler)
+        con = Consumer(self, hint, handler, args=args, kwargs=kwargs)
         con.forwardOpen()
 
         self.Consumers.append(con)

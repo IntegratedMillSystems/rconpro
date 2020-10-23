@@ -1,4 +1,4 @@
-from struct import *
+from struct import pack, unpack_from
 from random import randrange
 from typing import NamedTuple
 from threading import Timer
@@ -21,14 +21,17 @@ class Consumer:
     open, and receives data from the Connection instance.
     """
 
-    def __init__(self, plc, hint, handler):
+    def __init__(self, plc, hint, handler, args=(), kwargs={}):
         """
         Initiates Consumer by initiating variables and checking
         types.
         """
 
         self.plc = plc
+
         self._handler = handler
+        self._handler_args = args
+        self._handler_kwargs = kwargs
 
         if not isinstance(hint, ConsumerHint):
             raise TypeError("hint must be of type ConnectionHint")
@@ -217,6 +220,7 @@ class Consumer:
         for i in range(len(tagArray)):
             if tagArray[i].endswith("]"):
                 tag, base_tag, index = _parseTagName(tagArray[i], 0)
+                del tag
 
                 BaseTagLenBytes = len(base_tag)
                 if data_type == 211 and i == len(tagArray)-1:
@@ -229,7 +233,7 @@ class Consumer:
                     BaseTagLenBytes += 1
                     ioi += pack('<B', 0x00)
 
-                BaseTagLenWords = BaseTagLenBytes/2
+                # BaseTagLenWords = BaseTagLenBytes/2
                 if i < len(tagArray):
                     if not isinstance(index, list):
                         if index < 256:
@@ -318,7 +322,7 @@ class Consumer:
         Parse the data and send it to the handler function
         """
 
-        self._handler(data)
+        self._handler(data, *self._handler_args, **self._handler_kwargs)
 
 def _parseTagName(tag, offset):
     """
@@ -337,7 +341,7 @@ def _parseTagName(tag, offset):
             s = ind.split(',')		    # split so we can check for multi dimensin array
             if len(s) == 1:
                 ind = int(ind)
-                newTagName = bt+'['+str(ind+offset)+']'
+                # newTagName = bt+'['+str(ind+offset)+']'
             else:
                 # if we have a multi dim array, return the index
                 ind = []

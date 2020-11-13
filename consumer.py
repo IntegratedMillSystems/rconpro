@@ -282,6 +282,9 @@ class Consumer:
         self.keepAlive = LoopThread(self.hint.otrpi, self._askForData, daemon=True)
         self.keepAlive.start()
 
+    def Stop(self):
+        self.keepAlive.stop()
+
     def _askForData(self):
         """
         Send keep alive packets to producer

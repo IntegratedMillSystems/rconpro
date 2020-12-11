@@ -33,8 +33,9 @@ class Consumer:
         self._handler_args = args
         self._handler_kwargs = kwargs
 
+        print(hint)
         if not isinstance(hint, ConsumerHint):
-            raise TypeError("hint must be of type ConnectionHint")
+            raise TypeError("hint must be of type ConsumerHint")
         self.hint = hint
 
     def getTagSize(self):
@@ -322,7 +323,7 @@ class Consumer:
 
     def handle(self, data):
         """
-        Parse the data and send it to the handler function
+        Send the data to the handler function
         """
 
         self._handler(data, *self._handler_args, **self._handler_kwargs)

@@ -3,7 +3,7 @@ from random import randrange
 from typing import NamedTuple
 from threading import Timer
 
-from . import CommError
+from . import CommError # pylint: disable=import-error
 
 class ConsumerHint(NamedTuple):
     """

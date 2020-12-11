@@ -33,7 +33,6 @@ class Consumer:
         self._handler_args = args
         self._handler_kwargs = kwargs
 
-        print(hint)
         if not isinstance(hint, ConsumerHint):
             raise TypeError("hint must be of type ConsumerHint")
         self.hint = hint

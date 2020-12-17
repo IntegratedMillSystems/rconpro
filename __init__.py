@@ -30,13 +30,13 @@ class Connection:
 
         self.SequenceCount = 0
     
-    def addPLC(self, ip, shot=0):
+    def addPLC(self, ip, slot=0):
         """
         Initiates a PLC instance, registers our socket with
         the actual PLC over the network, and saves it to a list.
         """
 
-        plc = PLC(self, ip, shot)
+        plc = PLC(self, ip, slot)
         plc.register()
 
         self.PLCs.append(plc)

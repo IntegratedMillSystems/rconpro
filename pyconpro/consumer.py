@@ -4,6 +4,7 @@ from typing import NamedTuple
 from threading import Timer
 
 from . import CommError # pylint: disable=import-error
+from .socket import SocketError
 
 class ConsumerHint(NamedTuple):
     """
@@ -55,7 +56,13 @@ class Consumer:
         forward_open_response = self.plc.connection.setupSocket.receiveAll(4096)
 
         # Handle response
-        sts = unpack_from('<b', forward_open_response, 42)[0]
+        try:
+            sts = unpack_from('<b', forward_open_response, 42)[0]
+        except:
+            # Restarted connection too soon, so connection with PLC
+            # must be reset
+            raise SocketError("Unable to parse response. Please reset the socket.")
+
         if not sts:
             self.OTConnectionID = unpack_from('<I', forward_open_response, 44)[0]
             self.TOConnectionID = unpack_from('<I', forward_open_response, 48)[0] # Get ID for Connection instance to check

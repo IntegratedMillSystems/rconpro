@@ -30,6 +30,7 @@ class PLC:
         """
 
         # Register the connection
+        print("Registering")
         self.connection.setupSocket.connect(self.ip)
         self.connection.setupSocket.send(self._buildRegisterSession())
         reg_response = self.connection.setupSocket.receiveAll(4096)

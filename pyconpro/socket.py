@@ -16,9 +16,13 @@ class Socket(object):
         Initiate socket
         """
 
+        self.timeout = timeout
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.settimeout(timeout)
+        self.sock.settimeout(self.timeout)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+
+        # Allows the program to quickly restart the socket
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     def send(self, msg, timeout=0):
         """
@@ -27,16 +31,13 @@ class Socket(object):
 
         if timeout != 0:
             self.sock.settimeout(timeout)
-        total_sent = 0
-        while total_sent < len(msg):
-            try:
-                sent = self.sock.send(msg[total_sent:])
-                if sent == 0:
-                    raise SocketError("Socket connection broken.")
-                total_sent += sent
-            except socket.error:
-                raise SocketError("Socket connection broken.")
-        return total_sent
+
+        try:
+            sent = self.sock.sendall(msg)
+        except socket.error:
+            raise SocketError("Socket connection broken.")
+        
+        return sent
 
     def receiveAll(self, bytelen, timeout=0):
         """
@@ -76,16 +77,20 @@ class SetupSocket(Socket):
     """
     A socket for setting up sessions with PLCs.
     """
-
+    
     def connect(self, host):
-        """
-        Connect to the given PLC
-        """
-
         try:
             self.sock.connect((host, 44818))
-        except socket.timeout:
-            raise SocketError("Socket timeout during connection.")
+        except:
+            try:
+                self.sock.shutdown(socket.SHUT_RD)
+                self.sock.close()
+            except:
+                pass
+            
+            self.__init__(timeout=self.timeout)
+            self.sock.connect((host, 44818))
+
 
 class CPSocket(Socket):
     """

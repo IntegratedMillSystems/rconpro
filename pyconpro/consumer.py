@@ -3,8 +3,7 @@ from random import randrange
 from typing import NamedTuple
 from threading import Timer
 
-from . import CommError # pylint: disable=import-error
-from .socket import SocketError
+from . import CommError, PleaseResetError # pylint: disable=import-error
 
 class ConsumerHint(NamedTuple):
     """
@@ -61,7 +60,7 @@ class Consumer:
         except:
             # Restarted connection too soon, so connection with PLC
             # must be reset
-            raise SocketError("Unable to parse response. Please reset the socket.")
+            raise PleaseResetError("Unable to parse response. Please reset the socket.")
 
         if not sts:
             self.OTConnectionID = unpack_from('<I', forward_open_response, 44)[0]

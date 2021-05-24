@@ -6,6 +6,9 @@ import threading
 class CommError(Exception):
     ...
 
+class PleaseResetError(Exception):
+    ...
+
 from .socket import SetupSocket, CPSocket # pylint: disable=import-error
 from .plc import PLC # pylint: disable=import-error
 from .consumer import Consumer, ConsumerHint # pylint: disable=import-error

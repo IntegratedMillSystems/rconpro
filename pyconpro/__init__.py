@@ -14,6 +14,8 @@ from .plc import PLC # pylint: disable=import-error
 from .consumer import Consumer, ConsumerHint # pylint: disable=import-error
 # from .producer import Producer
 
+SHUT_RDWR = 2
+
 class Connection:
     """
     Manages sockets and serves Consumer instances data.
@@ -99,8 +101,5 @@ class Connection:
         Closes the sockets
         """
 
-        self.setupSocket.shutdown(socket.SHUT_RDWR)
         self.setupSocket.close()
-
-        self.CPSocket.shutdown(socket.SHUT_RDWR)
         self.CPSocket.close()

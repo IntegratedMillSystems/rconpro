@@ -1,30 +1,34 @@
 pub mod sockets;
-
 use sockets::{SetupStream, CPSocket};
+pub mod eip;
 
-struct Service {
-  plcs: Vec<Plc>,
-  cpsocket: CPSocket
+pub struct Service {
+  pub plcs: Vec<Plc>,
+  pub cpsocket: CPSocket
 }
 
-struct Plc {
+pub struct Plc {
   addr: String,
   setupstream: SetupStream,
   consumers: Vec<Consumer>,
 }
 
-struct ConsumerHint {
-  tag: String,
-  datasize: usize,
-  rpi: usize,
-  otrpi: usize,
+pub struct ConsumerHint {
+  pub tag: String,
+  pub data_size: usize,
+  pub rpi: usize,
+  pub otrpi: usize,
 }
 
-struct Consumer {
+pub struct Consumer {
   plc: Plc,
   hint: ConsumerHint,
   handler: fn(&[u8]),
+
+  ot_connection_id: u32,
+  sequence_count: u32,
 }
+
 
 impl Service {
   pub fn new() -> std::io::Result<Service> {

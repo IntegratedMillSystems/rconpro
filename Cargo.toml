@@ -16,4 +16,5 @@ path = "src/bin.rs"
 
 [dependencies]
 byteorder = "1.4.3"
+encoding = "0.2.33"
 rand = "0.8.4"

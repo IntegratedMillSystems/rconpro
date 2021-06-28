@@ -1,36 +1,38 @@
+use std::convert::TryInto;
 use byteorder::{LittleEndian, WriteBytesExt};
 use rand::Rng;
+use encoding::{Encoding, EncoderTrap};
+use encoding::all::UTF_8;
 
-
-
+use crate::ConsumerHint;
 
 
 
 
 /* Register the PLC */
 pub fn build_register_session() -> Vec<u8> {
-  const EIPCommand: u16 = 0x0065;
-  const EIPLength: u16 = 0x0004;
-  const EIPSessionHandle: u32 = 0x00;
-  const EIPStatus: u32 = 0x0000;
-  const EIPContext: u64 = 0x00;
-  const EIPOptions: u32 = 0x0000;
+  const EIP_COMMAND: u16 = 0x0065;
+  const EIP_LENGTH: u16 = 0x0004;
+  const EIP_SESSION_HANDLE: u32 = 0x00;
+  const EIP_STATUS: u32 = 0x0000;
+  const EIP_CONTEXT: u64 = 0x00;
+  const EIP_OPTIONS: u32 = 0x0000;
 
-  const EIPProtocolVersion: u16 = 0x01;
-  const EIPOptionFlag: u16 = 0x00;
+  const EIP_PROTOCOL_VERSION: u16 = 0x01;
+  const EIP_OPTION_FLAG: u16 = 0x00;
 
-  let mut registerSession = Vec<u8>::with_capacity(24);
+  let mut register_session = Vec::<u8>::with_capacity(24);
 
-  registerSession.write_u16::<LittleEndian>(EIPCommand);
-  registerSession.write_u16::<LittleEndian>(EIPLength);
-  registerSession.write_u32::<LittleEndian>(EIPSessionHandle);
-  registerSession.write_u32::<LittleEndian>(EIPStatus);
-  registerSession.write_u64::<LittleEndian>(EIPContext);
-  registerSession.write_u32::<LittleEndian>(EIPOptions);
-  registerSession.write_u16::<LittleEndian>(EIPProtocolVersion);
-  registerSession.write_u16::<LittleEndian>(EIPOptionFlag);
+  register_session.write_u16::<LittleEndian>(EIP_COMMAND).unwrap();
+  register_session.write_u16::<LittleEndian>(EIP_LENGTH).unwrap();
+  register_session.write_u32::<LittleEndian>(EIP_SESSION_HANDLE).unwrap();
+  register_session.write_u32::<LittleEndian>(EIP_STATUS).unwrap();
+  register_session.write_u64::<LittleEndian>(EIP_CONTEXT).unwrap();
+  register_session.write_u32::<LittleEndian>(EIP_OPTIONS).unwrap();
+  register_session.write_u16::<LittleEndian>(EIP_PROTOCOL_VERSION).unwrap();
+  register_session.write_u16::<LittleEndian>(EIP_OPTION_FLAG).unwrap();
 
-  return registerSession;
+  return register_session;
 }
 
 
@@ -43,144 +45,199 @@ pub fn build_register_session() -> Vec<u8> {
 /* Create Forward Open */
 pub fn build_forward_open_packet(session_handle: u32, hint: ConsumerHint) -> Vec<u8>{
   // Get bytes
-  let forward_open = build_cip_forward_open(hint: ConsumerHint);
-  let header = build_eip_send_rr_data_header(forward_open.len(), session_handle);
+  let mut forward_open = build_cip_forward_open(hint);
+  let mut header = build_eip_send_rr_data_header(
+    forward_open.len().try_into().unwrap(),
+    session_handle
+  );
 
   // Concatenate
-  header.append(forward_open);
+  header.append(&mut forward_open);
 
   return header;
 }
 
 
 fn build_eip_send_rr_data_header(frame_len: u16, session_handle: u32) -> Vec<u8> {
-  const EIPCommand: u16 = 0x6F;
-  const EIPLength: u16 = 16+frame_len;
-  const EIPSessionHandle: u32 = session_handle;
-  const EIPStatus: u32 = 0x00;
-  const EIPContext: u64 = 0x8000004a00000000;
-  const EIPOptions: u32 = 0x00;
+  const EIP_COMMAND: u16 = 0x6F;
+  let eip_length: u16 = 16+frame_len;
+  const EIP_STATUS: u32 = 0x00;
+  const EIP_CONTEXT: u64 = 0x8000004a00000000;
+  const EIP_OPTIONS: u32 = 0x00;
 
-  const EIPInterfaceHandle: u32 = 0x00;
-  const EIPTimeout: u16 = 0x00;
-  const EIPItemCount: u16 = 0x02;
-  const EIPItem1Type: u16 = 0x00;
-  const EIPItem1Length: u16 = 0x00;
-  const EIPItem2Type: u16 = 0xB2;
-  const EIPItem2Length: u16 = frameLen;
+  const EIP_INTERFACE_HANDLE: u32 = 0x00;
+  const EIP_TIMEOUT: u16 = 0x00;
+  const EIP_ITEM_COUNT: u16 = 0x02;
+  const EIP_ITEM_1_TYPE: u16 = 0x00;
+  const EIP_ITEM_1_LENGTH: u16 = 0x00;
+  const EIP_ITEM_2_TYPE: u16 = 0xB2;
+  let eip_item_2_length: u16 = frame_len;
 
-  let mut header = Vec<u8>::with_capacity(40);
+  let mut header = Vec::<u8>::with_capacity(40);
 
-  header.write_u16::<LittleEndian>(EIPCommand);
-  header.write_u16::<LittleEndian>(EIPLength);
-  header.write_u32::<LittleEndian>(EIPSessionHandle);
-  header.write_u32::<LittleEndian>(EIPStatus);
-  header.write_u64::<LittleEndian>(EIPContext);
-  header.write_u32::<LittleEndian>(EIPOptions);
-  header.write_u32::<LittleEndian>(EIPInterfaceHandle);
-  header.write_u16::<LittleEndian>(EIPTimeout);
-  header.write_u16::<LittleEndian>(EIPItemCount);
-  header.write_u16::<LittleEndian>(EIPItem1Type);
-  header.write_u16::<LittleEndian>(EIPItem1Length);
-  header.write_u16::<LittleEndian>(EIPItem2Type);
-  header.write_u16::<LittleEndian>(EIPItem2Length);
+  header.write_u16::<LittleEndian>(EIP_COMMAND).unwrap();
+  header.write_u16::<LittleEndian>(eip_length).unwrap();
+  header.write_u32::<LittleEndian>(session_handle).unwrap();
+  header.write_u32::<LittleEndian>(EIP_STATUS).unwrap();
+  header.write_u64::<LittleEndian>(EIP_CONTEXT).unwrap();
+  header.write_u32::<LittleEndian>(EIP_OPTIONS).unwrap();
+  header.write_u32::<LittleEndian>(EIP_INTERFACE_HANDLE).unwrap();
+  header.write_u16::<LittleEndian>(EIP_TIMEOUT).unwrap();
+  header.write_u16::<LittleEndian>(EIP_ITEM_COUNT).unwrap();
+  header.write_u16::<LittleEndian>(EIP_ITEM_1_TYPE).unwrap();
+  header.write_u16::<LittleEndian>(EIP_ITEM_1_LENGTH).unwrap();
+  header.write_u16::<LittleEndian>(EIP_ITEM_2_TYPE).unwrap();
+  header.write_u16::<LittleEndian>(eip_item_2_length).unwrap();
 
   return header;
 }
 
-fn build_cip_forward_open(hint: ConsumerHint) {
-  const CIPService: u8 = 0x54;
-  const CIPPathSize: u8 = 0x02;
-  const CIPClassType: u8 = 0x20;
-  const CIPClass: u8 = 0x06;
-  const CIPInstanceType: u8 = 0x24;
-  const CIPInstance: u8 = 0x01;
-  const CIPPriority: u8 = 0x0A;
-  const CIPTimeoutTicks: u8 = 0x0e;
+fn build_cip_forward_open(hint: ConsumerHint) -> Vec<u8> {
+  const CIP_SERVICE: u8 = 0x54;
+  const CIP_PATH_SIZE: u8 = 0x02;
+  const CIP_CLASS_TYPE: u8 = 0x20;
+  const CIP_CLASS: u8 = 0x06;
+  const CIP_INSTANCE_TYPE: u8 = 0x24;
+  const CIP_INSTANCE: u8 = 0x01;
+  const CIP_PRIORITY: u8 = 0x0A;
+  const CIP_TIMEOUT_TICKS: u8 = 0x0e;
 
   // Random number generator
   let mut rng = rand::thread_rng();
 
-  const CIPOTConnectionID: u32 = 0x00;
-  const CIPTOConnectionID: u32 = rng.gen_range(0..65000);
-  const CIPConnectionSerialNumber: u16 = rng.gen_range(0..65000);
-  const CIPVendorID: u16 = 0x01;
-  const CIPOriginatorSerialNumber: u32 = 42;
-  const CIPMultiplier: u32 = 0x00;
-  const CIPOTRPI: u32 = hint.otrpi * 1000;
-  const CIPOTNetworkConnectionParameters = 0x4802;
-  const CIPTORPI: u32 = hint.rpi * 1000;
-  const CIPTONetworkConnectionParameters: u16 = 0x4800 + hint.datasize;
+  const CIP_OT_CONNECTINO_ID: u32 = 0x00;
+  let cip_to_connection_id: u32 = rng.gen_range(0..65000);
+  let cip_connection_serial_number: u16 = rng.gen_range(0..65000);
+  const CIP_VENDOR_ID: u16 = 0x01;
+  const CIP_ORIGINATOR_SERIAL_NUMBER: u32 = 42;
+  const CIP_MULTIPLIER: u32 = 0x00;
+  let cip_ot_rpi: u32 = hint.otrpi.try_into().unwrap();
+  const CIP_OT_NETWORK_CONNECTION_PARAMETERS: u16 = 0x4802;
+  let cip_to_rpi: u32 = hint.rpi.try_into().unwrap();
+  let cip_to_network_connection_parameters: u16 = (0x4800 + hint.data_size).try_into().unwrap();
   
-  const CIPTransportTrigger: u8 = 0x81;
+  const CIP_TRANSPORT_TRIGGER: u8 = 0x81;
 
   // Build bytes
-  let mut forward_open = Vec<u8>::with_capacity(328);
+  let mut forward_open = Vec::<u8>::with_capacity(328);
 
-  forward_open.write_u8::<LittleEndian>(CIPService);
-  forward_open.write_u8::<LittleEndian>(CIPPathSize);
-  forward_open.write_u8::<LittleEndian>(CIPClassType);
-  forward_open.write_u8::<LittleEndian>(CIPClass);
-  forward_open.write_u8::<LittleEndian>(CIPInstanceType);
-  forward_open.write_u8::<LittleEndian>(CIPInstance);
-  forward_open.write_u8::<LittleEndian>(CIPPriority);
-  forward_open.write_u8::<LittleEndian>(CIPTimeoutTicks)
-  forward_open.write_u32::<LittleEndian>(CIPOTConnectionID);
-  forward_open.write_u32::<LittleEndian>(CIPTOConnectionID);
-  forward_open.write_u16::<LittleEndian>(CIPConnectionSerialNumber);
-  forward_open.write_u16::<LittleEndian>(CIPVendorID);
-  forward_open.write_u32::<LittleEndian>(CIPOriginatorSerialNumber);
-  forward_open.write_u32::<LittleEndian>(CIPMultiplier);
-  forward_open.write_u32::<LittleEndian>(CIPOTRPI);
-  forward_open.write_u16::<LittleEndian>(CIPOTNetworkConnectionParameters);
-  forward_open.write_u32::<LittleEndian>(CIPTORPI);
-  forward_open.write_u16::<LittleEndian>(CIPTONetworkConnectionParameters);
-  forward_open.write_u8::<LittleEndian>(CIPTransportTrigger);
+  forward_open.write_u8(CIP_SERVICE).unwrap();
+  forward_open.write_u8(CIP_PATH_SIZE).unwrap();
+  forward_open.write_u8(CIP_CLASS_TYPE).unwrap();
+  forward_open.write_u8(CIP_CLASS).unwrap();
+  forward_open.write_u8(CIP_INSTANCE_TYPE).unwrap();
+  forward_open.write_u8(CIP_INSTANCE).unwrap();
+  forward_open.write_u8(CIP_PRIORITY).unwrap();
+  forward_open.write_u8(CIP_TIMEOUT_TICKS).unwrap();
+  forward_open.write_u32::<LittleEndian>(CIP_OT_CONNECTINO_ID).unwrap();
+  forward_open.write_u32::<LittleEndian>(cip_to_connection_id).unwrap();
+  forward_open.write_u16::<LittleEndian>(cip_connection_serial_number).unwrap();
+  forward_open.write_u16::<LittleEndian>(CIP_VENDOR_ID).unwrap();
+  forward_open.write_u32::<LittleEndian>(CIP_ORIGINATOR_SERIAL_NUMBER).unwrap();
+  forward_open.write_u32::<LittleEndian>(CIP_MULTIPLIER).unwrap();
+  forward_open.write_u32::<LittleEndian>(cip_ot_rpi).unwrap();
+  forward_open.write_u16::<LittleEndian>(CIP_OT_NETWORK_CONNECTION_PARAMETERS).unwrap();
+  forward_open.write_u32::<LittleEndian>(cip_to_rpi).unwrap();
+  forward_open.write_u16::<LittleEndian>(cip_to_network_connection_parameters).unwrap();
+  forward_open.write_u8(CIP_TRANSPORT_TRIGGER).unwrap();
 
+  // Add the connection path
+  let mut path = build_connection_path(hint);
+  forward_open.write_u8( (path.len()/2).try_into().unwrap() ).unwrap();
+  forward_open.append(&mut path);
 
-
-  # add the connection path
-  path_size, path = self._connection_path()
-  connection_path = pack('<B', int(path_size/2))
-
-  connection_path += path
-  return ForwardOpen + connection_path
-
+  return forward_open;
 }
 
 fn build_connection_path(hint: ConsumerHint) -> Vec<u8> {
-  const PortSegment = 0x01 #b;
-  const LinkAddress = 0x00 #b;
-  const KeySegment = 0x34 #b;
-  const KeyFormat = 0x04 #b;
-  const VendorID = 0x00 #h;
-  const DeviceType = 0x00 #h;
-  const ProductCode = 0x00 #h;
-  const MajorRevision = 0x00 #b;
-  const MinorRevision = 0x00 #b;
+  const PORT_SEGMENT: u8 = 0x01;
+  const LINK_ADDRESS: u8 = 0x00;
+  const KEY_SEGMENT: u8 = 0x34;
+  const KEY_FORMAT: u8 = 0x04;
+  const VENDOR_ID: u16 = 0x00;
+  const DEVICE_TYPE: u16 = 0x00;
+  const PRODUCT_CODE: u16 = 0x00;
+  const MAJOR_REVISION: u8 = 0x00;
+  const MINOR_REVISION: u8 = 0x00;
 
   // Build bytes
-  let mut path = Vec<u8>::with_capacity(96);
+  let mut path = Vec::<u8>::with_capacity(96);
 
-  path.write_u8::<LittleEndian>(PortSegment);
-  path.write_u8::<LittleEndian>(LinkAddress);
-  path.write_u8::<LittleEndian>(KeySegment);
-  path.write_u8::<LittleEndian>(KeyFormat);
-  path.write_u16::<LittleEndian>(VendorID);
-  path.write_u16::<LittleEndian>(DeviceType);
-  path.write_u16::<LittleEndian>(ProductCode);
-  path.write_u8::<LittleEndian>(MajorRevision);
-  path.write_u8::<LittleEndian>(MinorRevision);
+  path.write_u8(PORT_SEGMENT).unwrap();
+  path.write_u8(LINK_ADDRESS).unwrap();
+  path.write_u8(KEY_SEGMENT).unwrap();
+  path.write_u8(KEY_FORMAT).unwrap();
+  path.write_u16::<LittleEndian>(VENDOR_ID).unwrap();
+  path.write_u16::<LittleEndian>(DEVICE_TYPE).unwrap();
+  path.write_u16::<LittleEndian>(PRODUCT_CODE).unwrap();
+  path.write_u8(MAJOR_REVISION).unwrap();
+  path.write_u8(MINOR_REVISION).unwrap();
 
   // Add tag
-  path.push( build_tag_ioi(hint.tag, 160) )
+  path.append( &mut build_tag_ioi(hint.tag) );
 
   return path;
 }
 
-fn build_tag_ioi(tag: String, data_type) -> Vec<u8> {
+fn build_tag_ioi(tag: String) -> Vec<u8> {
+  /*
+  Fron pyconpro:
+
+  The tag IOI is basically the tag name assembled into
+  an array of bytes structured in a way that the PLC will
+  understand.  It's a little crazy, but we have to consider the
+  many variations that a tag can be:
+  TagName (DINT)
+  TagName.1 (Bit of DINT) <- not handling this!
+  TagName.Thing (UDT)
+  TagName[4].Thing[2].Length (more complex UDT) <- we're not going to handle this for now
+  We also might be reading arrays, a bool from arrays (atomic), strings.
+      Oh and multi-dim arrays, program scope tags...
+  */
+
   let mut ioi = vec![];
   for tag_component in tag.split(".") {
-    
+    ioi.write_u8(0x91).unwrap();
+    ioi.write_u8(tag_component.len().try_into().unwrap() ).unwrap();
+    ioi.append( &mut UTF_8.encode(tag_component, EncoderTrap::Strict).unwrap() );
+
+    if tag_component.len() % 2 == 1 {
+      ioi.push(0x00);
+    }
   }
+
+  return ioi;
+}
+
+
+
+
+
+
+
+
+
+/* Keep-Alive packet */
+pub fn build_response_packet(connection_id: u32, sequence_count: u32) -> Vec<u8> {
+  const ITEM_COUNT: u16 = 0x02;
+  const TYPE_ID: u16 = 0x8002;
+  const LENGTH: u16 = 0x08;
+  const CONN_DATA: u16 = 0x00b1;
+  const DATA_LENGTH: u16 = 0x02;
+  const SEQUENCE_COUNT: u16 = 1;
+
+  let mut payload = Vec::<u8>::with_capacity(20);
+
+  payload.write_u16::<LittleEndian>(ITEM_COUNT).unwrap();
+  payload.write_u16::<LittleEndian>(TYPE_ID).unwrap();
+  payload.write_u16::<LittleEndian>(LENGTH).unwrap();
+
+  payload.write_u32::<LittleEndian>(connection_id).unwrap();
+  payload.write_u32::<LittleEndian>(sequence_count).unwrap();
+
+  payload.write_u16::<LittleEndian>(CONN_DATA).unwrap();
+  payload.write_u16::<LittleEndian>(DATA_LENGTH).unwrap();
+  payload.write_u16::<LittleEndian>(SEQUENCE_COUNT).unwrap();
+
+  return payload;
 }

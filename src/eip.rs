@@ -35,6 +35,17 @@ pub fn build_register_session() -> Vec<u8> {
   return register_session;
 }
 
+#[test]
+fn test_build_register_session() {
+  assert_eq!(
+    build_register_session(),
+    vec![101, 0, 4, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0,
+         0, 1, 0, 0, 0]
+  );
+}
+
 
 
 
@@ -92,6 +103,16 @@ fn build_eip_send_rr_data_header(frame_len: u16, session_handle: u32) -> Vec<u8>
   return header;
 }
 
+#[test]
+fn test_build_eip_send_rr_data_header() {
+  assert_eq!(
+    build_eip_send_rr_data_header(0, 0),
+    vec![111, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 74, 0, 0, 128, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 178, 0, 0, 0]
+  )
+}
+
+
 fn build_cip_forward_open(hint: ConsumerHint) -> Vec<u8> {
   const CIP_SERVICE: u8 = 0x54;
   const CIP_PATH_SIZE: u8 = 0x02;
@@ -105,7 +126,7 @@ fn build_cip_forward_open(hint: ConsumerHint) -> Vec<u8> {
   // Random number generator
   let mut rng = rand::thread_rng();
 
-  const CIP_OT_CONNECTINO_ID: u32 = 0x00;
+  const CIP_OT_CONNECTION_ID: u32 = 0x00;
   let cip_to_connection_id: u32 = rng.gen_range(0..65000);
   let cip_connection_serial_number: u16 = rng.gen_range(0..65000);
   const CIP_VENDOR_ID: u16 = 0x01;
@@ -129,7 +150,7 @@ fn build_cip_forward_open(hint: ConsumerHint) -> Vec<u8> {
   forward_open.write_u8(CIP_INSTANCE).unwrap();
   forward_open.write_u8(CIP_PRIORITY).unwrap();
   forward_open.write_u8(CIP_TIMEOUT_TICKS).unwrap();
-  forward_open.write_u32::<LittleEndian>(CIP_OT_CONNECTINO_ID).unwrap();
+  forward_open.write_u32::<LittleEndian>(CIP_OT_CONNECTION_ID).unwrap();
   forward_open.write_u32::<LittleEndian>(cip_to_connection_id).unwrap();
   forward_open.write_u16::<LittleEndian>(cip_connection_serial_number).unwrap();
   forward_open.write_u16::<LittleEndian>(CIP_VENDOR_ID).unwrap();
@@ -148,6 +169,7 @@ fn build_cip_forward_open(hint: ConsumerHint) -> Vec<u8> {
 
   return forward_open;
 }
+
 
 fn build_connection_path(hint: ConsumerHint) -> Vec<u8> {
   const PORT_SEGMENT: u8 = 0x01;
@@ -179,6 +201,22 @@ fn build_connection_path(hint: ConsumerHint) -> Vec<u8> {
   return path;
 }
 
+#[test]
+fn test_build_connection_path() {
+  let hint = ConsumerHint {
+    tag: String::from("Test"),
+    data_size: 6,
+    rpi: 1000,
+    otrpi: 1100
+  };
+
+  assert_eq!(
+    build_connection_path(hint),
+    vec![1, 0, 52, 4, 0, 0, 0, 0, 0, 0, 0, 0, 145, 4, 84, 101, 115, 116]
+  );
+}
+
+
 fn build_tag_ioi(tag: String) -> Vec<u8> {
   /*
   Fron pyconpro:
@@ -209,7 +247,13 @@ fn build_tag_ioi(tag: String) -> Vec<u8> {
   return ioi;
 }
 
-
+#[test]
+fn test_build_tag_ioi() {
+  assert_eq!(
+    build_tag_ioi(String::from("Test")),
+    vec![145, 4, 84, 101, 115, 116]
+  );
+}
 
 
 
@@ -241,3 +285,5 @@ pub fn build_response_packet(connection_id: u32, sequence_count: u32) -> Vec<u8>
 
   return payload;
 }
+
+

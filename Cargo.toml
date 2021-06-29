@@ -10,10 +10,6 @@ edition = "2018"
 name = "rconpro"
 path = "src/lib.rs"
 
-[[bin]]
-name = "rconpro-test"
-path = "src/bin.rs"
-
 [dependencies]
 byteorder = "1.4.3"
 encoding = "0.2.33"

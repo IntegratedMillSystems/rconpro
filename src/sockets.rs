@@ -1,5 +1,5 @@
 use std::net::{TcpStream, UdpSocket};
-use std::io::{Read, Write, Error};
+use std::io::{Read, Write, Result};
 use std::str::from_utf8;
 
 const SETUP_PORT: u16 = 44818;
@@ -14,7 +14,7 @@ pub struct SetupStream {
 }
 
 impl SetupStream {
-  pub fn new(host: &str) -> Result<SetupStream, Error> {
+  pub fn new(host: &str) -> Result<SetupStream> {
     let addr = (host, SETUP_PORT);
     match TcpStream::connect(addr) {
       Ok(stream) => {
@@ -30,19 +30,17 @@ impl SetupStream {
     }
   }
 
-  pub fn send_recieve(&mut self, msg: &[u8]) -> Result<String, Error> {
+  pub fn send_recieve(&mut self, msg: &[u8]) -> Result<Vec<u8>> {
     self.stream.write(msg)
       .expect("Couldn't send data");
-    
-    let mut response = String::from("");
+  
+    let mut response = vec![];
     let mut buf = [0 as u8; BUF_SIZE];
     loop {
       let size = self.stream.read(&mut buf)?;
 
-      // Parse data
-      let data_str = from_utf8( &buf[0..size] ) // Pass the part of the buf that has data
-        .expect("Response is not UTF8!");
-      response.push_str(data_str);
+      // Append data
+      response.extend_from_slice( &buf[0..size] );
       
       if size == 0 || size < buf.len() {
         break;
@@ -59,27 +57,25 @@ pub struct CPSocket {
 }
 
 impl CPSocket {
-  pub fn new() -> Result<CPSocket, Error> {
+  pub fn new() -> Result<CPSocket> {
     Ok(CPSocket {
       socket: UdpSocket::bind(("0.0.0.0", CONPRO_PORT))?
     })
   }
 
-  pub fn send(&mut self, msg: &[u8], ) -> Result<(), Error> {
-    self.socket.send(msg)?;
+  pub fn send_to(&mut self, msg: &[u8], addr: &str) -> Result<()> {
+    self.socket.send_to(msg, (addr, 2222))?;
     Ok(())
   }
 
-  pub fn recieve(&mut self) -> Result<String, Error> {
-    let mut response = String::from("");
+  pub fn recieve(&mut self) -> Result<Vec<u8>> {
+    let mut response = vec![];
     let mut buf = [0 as u8; BUF_SIZE];
     loop {
       let size = self.socket.recv(&mut buf)?;
 
-      // Parse data
-      let data_str = from_utf8( &buf[0..size] ) // Pass the part of the buf that has data
-        .expect("Response is not UTF8!");
-      response.push_str(data_str);
+      // Append data
+      response.extend_from_slice(&buf[0..size]);
       
       if size == 0 || size < buf.len() {
         break;

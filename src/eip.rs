@@ -54,7 +54,7 @@ fn test_build_register_session() {
 
 
 /* Create Forward Open */
-pub fn build_forward_open_packet(session_handle: u32, hint: ConsumerHint) -> Vec<u8>{
+pub fn build_forward_open_packet(session_handle: u32, hint: &ConsumerHint) -> Vec<u8>{
   // Get bytes
   let mut forward_open = build_cip_forward_open(hint);
   let mut header = build_eip_send_rr_data_header(
@@ -113,7 +113,7 @@ fn test_build_eip_send_rr_data_header() {
 }
 
 
-fn build_cip_forward_open(hint: ConsumerHint) -> Vec<u8> {
+fn build_cip_forward_open(hint: &ConsumerHint) -> Vec<u8> {
   const CIP_SERVICE: u8 = 0x54;
   const CIP_PATH_SIZE: u8 = 0x02;
   const CIP_CLASS_TYPE: u8 = 0x20;
@@ -171,7 +171,7 @@ fn build_cip_forward_open(hint: ConsumerHint) -> Vec<u8> {
 }
 
 
-fn build_connection_path(hint: ConsumerHint) -> Vec<u8> {
+fn build_connection_path(hint: &ConsumerHint) -> Vec<u8> {
   const PORT_SEGMENT: u8 = 0x01;
   const LINK_ADDRESS: u8 = 0x00;
   const KEY_SEGMENT: u8 = 0x34;
@@ -196,7 +196,7 @@ fn build_connection_path(hint: ConsumerHint) -> Vec<u8> {
   path.write_u8(MINOR_REVISION).unwrap();
 
   // Add tag
-  path.append( &mut build_tag_ioi(hint.tag) );
+  path.append( &mut build_tag_ioi(&hint.tag) );
 
   return path;
 }
@@ -211,13 +211,13 @@ fn test_build_connection_path() {
   };
 
   assert_eq!(
-    build_connection_path(hint),
+    build_connection_path(&hint),
     vec![1, 0, 52, 4, 0, 0, 0, 0, 0, 0, 0, 0, 145, 4, 84, 101, 115, 116]
   );
 }
 
 
-fn build_tag_ioi(tag: String) -> Vec<u8> {
+fn build_tag_ioi(tag: &str) -> Vec<u8> {
   /*
   Fron pyconpro:
 
@@ -250,7 +250,7 @@ fn build_tag_ioi(tag: String) -> Vec<u8> {
 #[test]
 fn test_build_tag_ioi() {
   assert_eq!(
-    build_tag_ioi(String::from("Test")),
+    build_tag_ioi("Test"),
     vec![145, 4, 84, 101, 115, 116]
   );
 }
@@ -262,7 +262,7 @@ fn test_build_tag_ioi() {
 
 
 /* Keep-Alive packet */
-pub fn build_response_packet(connection_id: u32, sequence_count: u32) -> Vec<u8> {
+pub fn build_response_packet(ot_connection_id: u32, sequence_count: u32) -> Vec<u8> {
   const ITEM_COUNT: u16 = 0x02;
   const TYPE_ID: u16 = 0x8002;
   const LENGTH: u16 = 0x08;
@@ -276,7 +276,7 @@ pub fn build_response_packet(connection_id: u32, sequence_count: u32) -> Vec<u8>
   payload.write_u16::<LittleEndian>(TYPE_ID).unwrap();
   payload.write_u16::<LittleEndian>(LENGTH).unwrap();
 
-  payload.write_u32::<LittleEndian>(connection_id).unwrap();
+  payload.write_u32::<LittleEndian>(ot_connection_id).unwrap();
   payload.write_u32::<LittleEndian>(sequence_count).unwrap();
 
   payload.write_u16::<LittleEndian>(CONN_DATA).unwrap();
@@ -286,4 +286,10 @@ pub fn build_response_packet(connection_id: u32, sequence_count: u32) -> Vec<u8>
   return payload;
 }
 
-
+#[test]
+fn test_build_response_packet() {
+  assert_eq!(
+    build_response_packet(0, 0),
+    vec![2, 0, 2, 128, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 177, 0, 2, 0, 1, 0]
+  );
+}

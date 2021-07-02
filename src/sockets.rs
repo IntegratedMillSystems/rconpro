@@ -1,11 +1,12 @@
 use std::net::{TcpStream, UdpSocket};
-use std::io::{Read, Write, Result};
-use std::str::from_utf8;
+use std::io::{Read, Write, Result, Cursor};
+use std::time::Duration;
+use byteorder::{ReadBytesExt, LittleEndian};
 
 const SETUP_PORT: u16 = 44818;
 const CONPRO_PORT: u16 = 2222;
 
-const HEADER_SIZE: u8 = 24;
+const HEADER_SIZE: usize = 24;
 
 const BUF_SIZE: usize = 4096;
 
@@ -36,15 +37,19 @@ impl SetupStream {
   
     let mut response = vec![];
     let mut buf = [0 as u8; BUF_SIZE];
-    loop {
-      let size = self.stream.read(&mut buf)?;
 
-      // Append data
+    // Get data
+    let size = self.stream.read(&mut buf)?;
+    response.extend_from_slice(&buf[0..size]);
+
+    let mut cursor = Cursor::new(&response);
+    cursor.set_position(2);
+    let data_len: usize = cursor.read_u16::<LittleEndian>().unwrap().into();
+    println!("Message size: {:}", data_len);
+
+    while response.len() - HEADER_SIZE < data_len {
+      let size = self.stream.read(&mut buf)?;
       response.extend_from_slice( &buf[0..size] );
-      
-      if size == 0 || size < buf.len() {
-        break;
-      } // Else the stream needs to read again
     }
 
     Ok(response)
@@ -57,9 +62,12 @@ pub struct CPSocket {
 }
 
 impl CPSocket {
-  pub fn new() -> Result<CPSocket> {
+  pub fn new(timeout: Duration) -> Result<CPSocket> {
+    let mut socket = UdpSocket::bind(("0.0.0.0", CONPRO_PORT))?;
+    socket.set_read_timeout(Some(timeout));
+
     Ok(CPSocket {
-      socket: UdpSocket::bind(("0.0.0.0", CONPRO_PORT))?
+      socket: socket
     })
   }
 
@@ -71,17 +79,11 @@ impl CPSocket {
   pub fn recieve(&mut self) -> Result<Vec<u8>> {
     let mut response = vec![];
     let mut buf = [0 as u8; BUF_SIZE];
-    loop {
-      let size = self.socket.recv(&mut buf)?;
-
-      // Append data
-      response.extend_from_slice(&buf[0..size]);
-      
-      if size == 0 || size < buf.len() {
-        break;
-      } // Else the stream needs to read again
-    }
-
+    
+    // Get data
+    let size = self.socket.recv(&mut buf)?;
+    response.extend_from_slice(&buf[0..size]);
+    
     Ok(response)
   }
 }

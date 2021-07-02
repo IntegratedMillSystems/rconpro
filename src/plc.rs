@@ -7,16 +7,16 @@ use crate::eip::build_register_session;
 pub struct Plc {
   pub(crate) addr: String,
   active_consumer_count: usize,
-  setup_stream: SetupStream,
-  session_handle: u32
+  pub(crate) setup_stream: SetupStream,
+  pub(crate) session_handle: u32
 }
 
 impl Plc {
-  pub fn new(addr: String) -> std::io::Result<Plc> {
+  pub fn new(addr: &str) -> std::io::Result<Plc> {
     Ok(Plc {
-      addr: (&addr).to_string(),
+      addr: addr.to_string(),
       active_consumer_count: 0,
-      setup_stream: SetupStream::new(&addr)?,
+      setup_stream: SetupStream::new(addr)?,
       session_handle: 0
     })
   }

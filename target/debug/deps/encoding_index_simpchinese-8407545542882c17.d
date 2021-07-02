@@ -1,0 +1,9 @@
+/home/jsimonrichard/Desktop/IMS/IMSLogger/pyconpro-rust/target/debug/deps/encoding_index_simpchinese-8407545542882c17.rmeta: /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/lib.rs /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030.rs /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030_ranges.rs
+
+/home/jsimonrichard/Desktop/IMS/IMSLogger/pyconpro-rust/target/debug/deps/libencoding_index_simpchinese-8407545542882c17.rlib: /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/lib.rs /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030.rs /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030_ranges.rs
+
+/home/jsimonrichard/Desktop/IMS/IMSLogger/pyconpro-rust/target/debug/deps/encoding_index_simpchinese-8407545542882c17.d: /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/lib.rs /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030.rs /home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030_ranges.rs
+
+/home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/lib.rs:
+/home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030.rs:
+/home/jsimonrichard/.cargo/registry/src/github.com-1ecc6299db9ec823/encoding-index-simpchinese-1.20141219.5/gb18030_ranges.rs:

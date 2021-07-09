@@ -293,3 +293,14 @@ fn test_build_response_packet() {
     vec![2, 0, 2, 128, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 177, 0, 2, 0, 1, 0]
   );
 }
+
+
+
+
+
+
+
+/* Get Tag List */
+pub fn build_get_tag_list_query() {
+  
+}

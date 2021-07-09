@@ -1,11 +1,14 @@
 pub mod sockets;
+pub use sockets::EipAddr;
+
 pub mod eip;
 
 mod service;
 pub use service::*;
 
 mod plc;
-pub use plc::*;
+pub(crate) use plc::*;
 
 mod consumer;
-pub use consumer::*;
+pub(crate) use consumer::*;
+pub use consumer::ConsumerHint;

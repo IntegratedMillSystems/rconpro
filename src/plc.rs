@@ -1,27 +1,32 @@
 use std::io::{Result, Cursor};
+use std::collections::HashMap;
 use byteorder::{ReadBytesExt, LittleEndian};
 
-use crate::sockets::SetupStream;
+use crate::sockets::{EipAddr, SetupStream};
 use crate::eip::build_register_session;
+use crate::{Consumer, ConsumerHint};
 
-pub struct Plc {
-  pub(crate) addr: String,
-  active_consumer_count: usize,
+/*
+
+*/
+pub(crate) struct Plc {
+  pub(crate) addr: EipAddr,
+  pub(crate) consumers: HashMap<u32, Consumer>,
   pub(crate) setup_stream: SetupStream,
   pub(crate) session_handle: u32
 }
 
 impl Plc {
-  pub fn new(addr: &str) -> std::io::Result<Plc> {
+  pub(crate) fn new(addr: EipAddr) -> std::io::Result<Plc> {
     Ok(Plc {
-      addr: addr.to_string(),
-      active_consumer_count: 0,
-      setup_stream: SetupStream::new(addr)?,
+      addr: addr,
+      consumers: HashMap::new(),
+      setup_stream: SetupStream::new(&addr)?,
       session_handle: 0
     })
   }
 
-  pub fn register(&mut self) -> Result<()> {
+  pub(crate) fn register(&mut self) -> Result<()> {
     let reg_response = self.setup_stream.send_recieve(
       &build_register_session().as_slice()
     )?;
@@ -36,12 +41,17 @@ impl Plc {
 
     Ok(())
   }
+  
+  pub(crate) fn add_consumer(&mut self, hint: ConsumerHint, handler: fn(&[u8])) -> &Consumer {
+    let mut con = Consumer::new(hint, handler);
+    let to_connection_id = con.send_forward_open(&mut self.setup_stream, self.session_handle)
+      .unwrap();
 
-  pub fn get_active_consumer_count(&self) -> usize {
-    return self.active_consumer_count;
-  }
+    self.consumers.insert(
+      to_connection_id,
+      con
+    );
 
-  pub(crate) fn increment_active_consumer_count(&mut self) {
-    self.active_consumer_count += 1;
+    return &self.consumers[&to_connection_id];
   }
 }

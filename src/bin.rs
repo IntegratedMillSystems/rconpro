@@ -1,5 +1,5 @@
-use rconpro::{Service, Plc, Consumer, ConsumerHint};
-
+use rconpro::{Service, EipAddr, ConsumerHint};
+use std::net::{IpAddr, Ipv4Addr};
 use std::io::{stdin, stdout, Read, Write};
 
 fn handler(d: &[u8]) {
@@ -10,9 +10,11 @@ fn main() {
   let mut service = Service::new().unwrap();
   service.start();
 
-  let mut plc = Plc::new("172.16.13.200").unwrap();
-  plc.register().unwrap();
-  
+  let addr = EipAddr {
+    addr: IpAddr::V4(Ipv4Addr::new(172, 16, 13, 200)),
+    slot: 0,
+  };
+
   let hint = ConsumerHint {
     tag: String::from("test"),
     data_size: 6,
@@ -20,10 +22,7 @@ fn main() {
     rpi: 1_000_000
   };
 
-  let mut con = Consumer::new(plc, hint, handler);
-  con.send_forward_open().unwrap();
-
-  service.add_consumer(con);
+  service.add_consumer(addr, hint, handler);
 
   // Wait for enter
   let mut stdout = stdout();

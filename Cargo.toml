@@ -1,5 +1,5 @@
 [package]
-name = "pyconpro-rust"
+name = "rconpro"
 version = "0.1.0"
 authors = ["jsimonrichard <jsimonrichard@gmail.com>"]
 edition = "2018"
@@ -17,5 +17,6 @@ path = "src/bin.rs"
 [dependencies]
 byteorder = "1.4.3"
 ctrlc = "3.1.9"
+derive_more = "0.99.16"
 encoding = "0.2.33"
 rand = "0.8.4"

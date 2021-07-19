@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::thread;
 use std::time::Duration;
 use std::convert::TryInto;
+use crossbeam::queue::SegQueue;
 use byteorder::{ReadBytesExt, LittleEndian};
 
 use crate::eip;
@@ -20,12 +21,17 @@ pub struct ConsumerHint {
 }
 
 /*
+Enum Type for the handler function
+*/
+pub type ConsumerQueue = SegQueue<Vec<u8>>;
+
+/*
 The consumer struct
 Responsible for a single consumer
 */
 pub(crate) struct Consumer {
   hint: Arc<ConsumerHint>,
-  pub(crate) handler: fn(&[u8]),
+  pub(crate) queue: Arc<ConsumerQueue>,
 
   pub(crate) ot_connection_id: u32,
   pub(crate) to_connection_id: u32,
@@ -35,10 +41,10 @@ impl Consumer {
   /*
   Initiate a consumer
   */
-  pub(crate) fn new(hint: ConsumerHint, handler: fn(&[u8])) -> Consumer {
+  pub(crate) fn new(hint: ConsumerHint, queue: &Arc<ConsumerQueue>) -> Consumer {
     Consumer {
       hint: Arc::new(hint),
-      handler: handler,
+      queue: queue.clone(),
       ot_connection_id: 0,
       to_connection_id: 0,
     }

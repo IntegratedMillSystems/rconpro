@@ -7,13 +7,13 @@ use std::collections::HashMap;
 use byteorder::{ReadBytesExt, LittleEndian};
 
 use crate::sockets::{EipAddr, CPSocket};
-use crate::{ConsumerHint, Plc};
+use crate::{ConsumerHint, Plc, ConsumerQueue};
 
 /*
 Entrypoint of rconpro
 Manages PLCs, Consumers, and incomming Consumer/Producer packets.
 */
-pub struct Service{ 
+pub struct Service { 
   pub(crate) plcs: Arc<RwLock<HashMap<EipAddr, Plc>>>,
   pub(crate) cpsocket: Arc<Mutex<CPSocket>>,
   pub(crate) sequence_count: Arc<AtomicU32>, 
@@ -25,16 +25,12 @@ impl Service {
   This returns a result in case the binding of the CPSocket fails; make sure it
   is unwrapped.
   */
-  pub fn new() -> Result<Service> {
-    // Define
-    let timeout = Duration::new(1,0);
-    let service: Service = Service {
+  pub fn new() -> Service {
+    Service {
       plcs: Arc::new(RwLock::new(HashMap::new())),
-      cpsocket: Arc::new(Mutex::new(CPSocket::new(timeout)?)),
+      cpsocket: Arc::new(Mutex::new(CPSocket::new())),
       sequence_count: Arc::new(AtomicU32::new(0)),
-    };
-
-    Ok(service)
+    }
   }
 
   /*
@@ -42,7 +38,7 @@ impl Service {
   This function calls all of the logic required to add and start a Consumer, regardless
   of whether or not a connection has already been made with the target PLC.
   */
-  pub fn add_consumer(&mut self, addr: EipAddr, hint: ConsumerHint, handler: fn(&[u8])) -> Result<()> {
+  pub fn add_consumer(&mut self, addr: EipAddr, hint: ConsumerHint, queue: &Arc<ConsumerQueue>) -> Result<u32> {
     // Get lock on plcs list
     let mut plcs = self.plcs.write()
       .expect("PLC HashMap Lock is poisened");
@@ -52,6 +48,7 @@ impl Service {
       plcs.get_mut(&addr).unwrap()
     } else {
       let mut plc = Plc::new(addr)?;
+      plc.connect()?;
       plc.register()?;
 
       plcs.insert(plc.addr, plc);
@@ -59,10 +56,21 @@ impl Service {
     };
 
     // Create consumer
-    let con = plc.add_consumer(hint, handler);
+    let (con, to_connection_id) = plc.add_consumer(hint, queue);
     
     // Start keep alive response thread
     con.start_response_thread(&self.cpsocket, addr, &self.sequence_count);
+
+    Ok(to_connection_id)
+  }
+
+  pub fn start(&mut self) -> Result<()> {
+    // Bind Socket
+    let timeout = Duration::new(1,0);
+    self.cpsocket.lock().unwrap().bind(timeout)?;
+
+    // Start listener
+    self.start_listener();
 
     Ok(())
   }
@@ -70,7 +78,7 @@ impl Service {
   /*
   Starts the producer listening thread for the service
   */
-  pub fn start(&self) {
+  fn start_listener(&self) {
     // Create locks for this thread
     let plcs_lock = Arc::clone(&self.plcs);
     let cpsocket_lock = Arc::clone(&self.cpsocket);
@@ -102,7 +110,8 @@ impl Service {
             let plc = &plcs[&src_addr];
 
             if plc.consumers.contains_key(&connection_id) {
-              (plc.consumers[&connection_id].handler)(&d[20..]);
+              // Push to the queue
+              plc.consumers[&connection_id].queue.push(d[20..].to_vec());
               continue;
             }
           }

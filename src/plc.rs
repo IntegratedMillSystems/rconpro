@@ -1,10 +1,11 @@
 use std::io::{Result, Cursor};
 use std::collections::HashMap;
+use std::sync::Arc;
 use byteorder::{ReadBytesExt, LittleEndian};
 
 use crate::sockets::{EipAddr, SetupStream};
 use crate::eip::build_register_session;
-use crate::{Consumer, ConsumerHint};
+use crate::{Consumer, ConsumerHint, ConsumerQueue};
 
 /*
 The struct representing PLCs
@@ -25,9 +26,15 @@ impl Plc {
     Ok(Plc {
       addr: addr,
       consumers: HashMap::new(),
-      setup_stream: SetupStream::new(&addr)?,
+      setup_stream: SetupStream::new(),
       session_handle: 0
     })
+  }
+
+  pub(crate) fn connect(&mut self) -> std::io::Result<()> {
+    self.setup_stream.connect(&self.addr)?;
+    
+    Ok(())
   }
 
   /*
@@ -52,8 +59,8 @@ impl Plc {
   /*
   Start a consumer and add it to the hashmap
   */
-  pub(crate) fn add_consumer(&mut self, hint: ConsumerHint, handler: fn(&[u8])) -> &Consumer {
-    let mut con = Consumer::new(hint, handler);
+  pub(crate) fn add_consumer(&mut self, hint: ConsumerHint, queue: &Arc<ConsumerQueue>) -> (&Consumer, u32) {
+    let mut con = Consumer::new(hint, queue);
     let to_connection_id = con.send_forward_open(&mut self.setup_stream, self.session_handle)
       .unwrap();
 
@@ -62,6 +69,6 @@ impl Plc {
       con
     );
 
-    return &self.consumers[&to_connection_id];
+    (&self.consumers[&to_connection_id], to_connection_id)
   }
 }

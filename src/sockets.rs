@@ -39,7 +39,7 @@ The SetupStream struct contains a TcpStream and some methods that use that strea
 to set up a consumer/producer connection
 */
 pub(crate) struct SetupStream {
-  stream: TcpStream,
+  stream: Option<TcpStream>,
 }
 impl SetupStream {
 
@@ -48,22 +48,18 @@ impl SetupStream {
   This actually returns a result because the connection could fail; make sure that
   result is unwrapped.
   */
-  pub(crate) fn new(host: &EipAddr) -> Result<SetupStream> {
-    let socket_addr = SocketAddr::new(host.addr, SETUP_PORT);
-
-    // Try to connect
-    match TcpStream::connect(socket_addr) {
-      Ok(stream) => {
-        println!("Successfully connected to {:?}", host);
-        return Ok(SetupStream {
-                    stream: stream
-                  });
-      },
-      Err(e) => {
-        eprintln!("Failed to connect: {}", e);
-        return Err(e);
-      }
+  pub(crate) fn new() -> SetupStream {
+    SetupStream {
+      stream: None
     }
+  }
+
+  pub(crate) fn connect(&mut self, host: &EipAddr) -> Result<()> {
+    // Try to connect
+    let socket_addr = SocketAddr::new(host.addr, SETUP_PORT);
+    self.stream = Some(TcpStream::connect(socket_addr)?);
+
+    Ok(())
   }
 
   /*
@@ -72,7 +68,7 @@ impl SetupStream {
   */
   pub(crate) fn send_recieve(&mut self, msg: &[u8]) -> Result<Vec<u8>> {
     // Send the message
-    self.stream.write(msg)
+    self.stream.as_ref().unwrap().write(msg)
       .expect("Couldn't send data");
   
     // Get the response
@@ -81,7 +77,7 @@ impl SetupStream {
     let mut buf = [0 as u8; BUF_SIZE];
 
     // Get first data packet
-    let size = self.stream.read(&mut buf)?;
+    let size = self.stream.as_ref().unwrap().read(&mut buf)?;
     response.extend_from_slice(&buf[0..size]);
 
     // Parse with file cursor
@@ -94,7 +90,7 @@ impl SetupStream {
 
     // Get the rest of the message
     while response.len() - HEADER_SIZE < data_len {
-      let size = self.stream.read(&mut buf)?;
+      let size = self.stream.as_ref().unwrap().read(&mut buf)?;
       response.extend_from_slice( &buf[0..size] );
     }
 
@@ -106,7 +102,7 @@ impl SetupStream {
 A struct for recieving producer data and sending keep alive packets
 */
 pub struct CPSocket {
-  socket: UdpSocket,
+  socket: Option<UdpSocket>,
 }
 impl CPSocket {
 
@@ -115,14 +111,18 @@ impl CPSocket {
   As with the SetupStream, this function returns a result because the socket bind
   could fail; make sure the result is unwrapped.
   */
-  pub fn new(timeout: Duration) -> Result<CPSocket> {
-    // Create, bind socket and set timeout
-    let socket = UdpSocket::bind(("0.0.0.0", CONPRO_PORT))?;
-    socket.set_read_timeout(Some(timeout)).unwrap();
+  pub fn new() -> CPSocket {
+    CPSocket {
+      socket: None
+    }
+  }
 
-    Ok(CPSocket {
-      socket: socket
-    })
+  pub fn bind(&mut self, timeout: Duration) -> Result<()> {
+    // Create, bind socket and set timeout
+    self.socket = Some( UdpSocket::bind(("0.0.0.0", CONPRO_PORT))? );
+    self.socket.as_ref().unwrap().set_read_timeout(Some(timeout)).unwrap();
+    
+    Ok(())
   }
 
   /*
@@ -130,7 +130,7 @@ impl CPSocket {
   This is used to send keep-alive packets
   */
   pub fn send_to(&self, msg: &[u8], host: &EipAddr) -> Result<()> {
-    self.socket.send_to(msg, SocketAddr::new(host.addr, 2222))?;
+    self.socket.as_ref().unwrap().send_to(msg, SocketAddr::new(host.addr, 2222))?;
     Ok(())
   }
 
@@ -144,7 +144,7 @@ impl CPSocket {
     let mut buf = [0 as u8; BUF_SIZE];
     
     // Get data
-    let (size, src) = self.socket.recv_from(&mut buf)?;
+    let (size, src) = self.socket.as_ref().unwrap().recv_from(&mut buf)?;
     response.extend_from_slice(&buf[0..size]);
 
     // Parse src

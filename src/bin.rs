@@ -1,14 +1,10 @@
-use rconpro::{Service, EipAddr, ConsumerHint};
+use rconpro::{Service, EipAddr, ConsumerHint, ConsumerQueue};
 use std::net::{IpAddr, Ipv4Addr};
-use std::io::{stdin, stdout, Read, Write};
-
-fn handler(d: &[u8]) {
-  println!("{:?}", d);
-}
+use std::sync::Arc;
 
 fn main() {
-  let mut service = Service::new().unwrap();
-  service.start();
+  let mut service = Service::new();
+  service.start().unwrap();
 
   let addr = EipAddr {
     addr: IpAddr::V4(Ipv4Addr::new(172, 16, 13, 200)),
@@ -22,12 +18,14 @@ fn main() {
     rpi: 1_000_000
   };
 
-  service.add_consumer(addr, hint, handler)
+  let data = Arc::new(ConsumerQueue::new());
+
+  service.add_consumer(addr, hint, &data)
     .unwrap();
 
-  // Wait for enter
-  let mut stdout = stdout();
-  stdout.write(b"Press ENTER to close...").unwrap();
-  stdout.flush().unwrap();
-  stdin().read(&mut [0]).unwrap();
+  loop {
+    while !data.is_empty() {
+      println!("{:?}", data.pop());
+    }
+  }
 }

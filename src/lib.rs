@@ -11,4 +11,4 @@ pub(crate) use plc::*;
 
 mod consumer;
 pub(crate) use consumer::*;
-pub use consumer::ConsumerHint;
+pub use consumer::{ConsumerHint, ConsumerQueue};

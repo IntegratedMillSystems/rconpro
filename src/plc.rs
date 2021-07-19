@@ -7,7 +7,8 @@ use crate::eip::build_register_session;
 use crate::{Consumer, ConsumerHint};
 
 /*
-
+The struct representing PLCs
+All consumers are owned by a Plc struct
 */
 pub(crate) struct Plc {
   pub(crate) addr: EipAddr,
@@ -17,6 +18,9 @@ pub(crate) struct Plc {
 }
 
 impl Plc {
+  /*
+  Start socket and init Plc
+  */
   pub(crate) fn new(addr: EipAddr) -> std::io::Result<Plc> {
     Ok(Plc {
       addr: addr,
@@ -26,6 +30,9 @@ impl Plc {
     })
   }
 
+  /*
+  Register a connection with the actual PLC
+  */
   pub(crate) fn register(&mut self) -> Result<()> {
     let reg_response = self.setup_stream.send_recieve(
       &build_register_session().as_slice()
@@ -42,6 +49,9 @@ impl Plc {
     Ok(())
   }
   
+  /*
+  Start a consumer and add it to the hashmap
+  */
   pub(crate) fn add_consumer(&mut self, hint: ConsumerHint, handler: fn(&[u8])) -> &Consumer {
     let mut con = Consumer::new(hint, handler);
     let to_connection_id = con.send_forward_open(&mut self.setup_stream, self.session_handle)

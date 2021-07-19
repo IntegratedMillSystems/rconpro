@@ -22,7 +22,8 @@ fn main() {
     rpi: 1_000_000
   };
 
-  service.add_consumer(addr, hint, handler);
+  service.add_consumer(addr, hint, handler)
+    .unwrap();
 
   // Wait for enter
   let mut stdout = stdout();

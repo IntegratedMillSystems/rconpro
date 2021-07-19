@@ -1,6 +1,6 @@
 use std::thread;
 use std::time::Duration;
-use std::sync::atomic::{AtomicU32};
+use std::sync::atomic::{AtomicU32, AtomicBool, Ordering};
 use std::sync::{Arc, RwLock, Mutex};
 use std::io::{Result, Cursor, ErrorKind};
 use std::collections::HashMap;
@@ -16,7 +16,8 @@ Manages PLCs, Consumers, and incomming Consumer/Producer packets.
 pub struct Service { 
   pub(crate) plcs: Arc<RwLock<HashMap<EipAddr, Plc>>>,
   pub(crate) cpsocket: Arc<Mutex<CPSocket>>,
-  pub(crate) sequence_count: Arc<AtomicU32>, 
+  pub(crate) sequence_count: Arc<AtomicU32>,
+  alive: Arc<AtomicBool>,
 }
 impl Service {
 
@@ -30,6 +31,7 @@ impl Service {
       plcs: Arc::new(RwLock::new(HashMap::new())),
       cpsocket: Arc::new(Mutex::new(CPSocket::new())),
       sequence_count: Arc::new(AtomicU32::new(0)),
+      alive: Arc::new(AtomicBool::new(true)),
     }
   }
 
@@ -80,6 +82,7 @@ impl Service {
   */
   fn start_listener(&self) {
     // Create locks for this thread
+    let alive = self.alive.clone();
     let plcs_lock = Arc::clone(&self.plcs);
     let cpsocket_lock = Arc::clone(&self.cpsocket);
 
@@ -87,47 +90,61 @@ impl Service {
     Listens to producers, parses incomming data, and sends parsed data to the
     appropriate consumer handler.
     */
-    thread::Builder::new().name("Listening Thread".to_string()).spawn(move || loop {
+    thread::Builder::new().name("Listening Thread".to_string()).spawn(move || {
+      while alive.load(Ordering::Relaxed) {
+        // Sleep
+        thread::sleep(Duration::new(0, 1));
 
-      // Sleep
-      thread::sleep(Duration::new(0, 1));
+        // Aquire socket Lock
+        let mut cpsocket = cpsocket_lock.lock().unwrap();
 
-      // Aquire socket Lock
-      let mut cpsocket = cpsocket_lock.lock().unwrap();
+        // Recieve data
+        match cpsocket.recieve() {
+          Ok((d, src_addr)) => {
 
-      // Recieve data
-      match cpsocket.recieve() {
-        Ok((d, src_addr)) => {
+            // Get id
+            let mut cursor = Cursor::new(&d);
+            cursor.set_position(6);
+            let connection_id = cursor.read_u32::<LittleEndian>().unwrap();
 
-          // Get id
-          let mut cursor = Cursor::new(&d);
-          cursor.set_position(6);
-          let connection_id = cursor.read_u32::<LittleEndian>().unwrap();
+            // Send data to appropriate consumer
+            let plcs = plcs_lock.read().unwrap();
+            if plcs.contains_key(&src_addr) {
+              let plc = &plcs[&src_addr];
 
-          // Send data to appropriate consumer
-          let plcs = plcs_lock.read().unwrap();
-          if plcs.contains_key(&src_addr) {
-            let plc = &plcs[&src_addr];
-
-            if plc.consumers.contains_key(&connection_id) {
-              // Push to the queue
-              plc.consumers[&connection_id].queue.push(d[20..].to_vec());
-              continue;
+              if plc.consumers.contains_key(&connection_id) {
+                // Push to the queue
+                plc.consumers[&connection_id].queue.push(d[20..].to_vec());
+                continue;
+              }
             }
-          }
 
-          // No consumer was found
-          // This should happen.
-          eprintln!("That was weird. We didn't find an active consumer for the data we recieved")
-        },
-        Err(e) => {
-          if e.kind() == ErrorKind::WouldBlock {
-            // The socket timed out
-          } else {
-            println!("{:}", e);
+            // No consumer was found
+            // This should happen.
+            eprintln!("That was weird. We didn't find an active consumer for the data we recieved")
+          },
+          Err(e) => {
+            if e.kind() == ErrorKind::WouldBlock {
+              // The socket timed out
+            } else {
+              println!("{:}", e);
+            }
           }
         }
       }
     }).unwrap();
+  }
+
+  pub fn stop_consumer(&mut self, plc: EipAddr, to_connection_id: u32) -> Option<()> {
+    let mut plcs = self.plcs.write().unwrap();
+    let mut con = plcs.get_mut(&plc)?
+      .consumers.remove(&to_connection_id)?;
+    con.stop();
+
+    Some(())
+  }
+
+  pub fn stop(&mut self) {
+    self.alive.store(false, Ordering::Release);
   }
 }

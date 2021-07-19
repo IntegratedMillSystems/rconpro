@@ -1,6 +1,6 @@
 use std::io::{Result, Error, ErrorKind, Cursor};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 use std::convert::TryInto;
@@ -35,6 +35,8 @@ pub(crate) struct Consumer {
 
   pub(crate) ot_connection_id: u32,
   pub(crate) to_connection_id: u32,
+
+  alive: Arc<AtomicBool>,
 }
 impl Consumer {
 
@@ -47,6 +49,7 @@ impl Consumer {
       queue: queue.clone(),
       ot_connection_id: 0,
       to_connection_id: 0,
+      alive: Arc::new(AtomicBool::new(true))
     }
   }
 
@@ -91,6 +94,7 @@ impl Consumer {
   */
   pub(crate) fn start_response_thread(&self, cpsocket: &Arc<Mutex<CPSocket>>, plc_addr: EipAddr, sequence_count: &Arc<AtomicU32>) {
     // Get locks for the thread
+    let alive = self.alive.clone();
     let cpsocket_lock = Arc::clone(cpsocket);
     let sequence_count_lock = Arc::clone(sequence_count);
 
@@ -106,23 +110,28 @@ impl Consumer {
     /*
     Send response packates at an interval
     */
-    thread::Builder::new().name(format!("Response thread for {}", hint.tag)).spawn(move || loop {
+    thread::Builder::new().name(format!("Response thread for {}", hint.tag)).spawn(move || {
+      while alive.load(Ordering::Relaxed) {
 
-      // Sleep
-      thread::sleep(duration);
+        // Sleep
+        thread::sleep(duration);
 
-      // Aquire socket lock
-      let cpsocket = cpsocket_lock.lock().unwrap();
+        // Aquire socket lock
+        let cpsocket = cpsocket_lock.lock().unwrap();
 
-      // Send keep alive packets and increment sequence_count
-      let msg = eip::build_response_packet(
-        ot_connection_id,
-        sequence_count_lock.fetch_add(1, Ordering::SeqCst),
-      );
+        // Send keep alive packets and increment sequence_count
+        let msg = eip::build_response_packet(
+          ot_connection_id,
+          sequence_count_lock.fetch_add(1, Ordering::SeqCst),
+        );
 
-      // Send the packet
-      cpsocket.send_to(msg.as_slice(), &plc_addr).unwrap();
-
+        // Send the packet
+        cpsocket.send_to(msg.as_slice(), &plc_addr).unwrap();
+      }
     }).unwrap();
+  }
+
+  pub(crate) fn stop(&mut self) {
+    self.alive.store(false, Ordering::Release);
   }
 }

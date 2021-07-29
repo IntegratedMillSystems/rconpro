@@ -57,9 +57,9 @@ impl Consumer {
   Send a forward open to the producer
   This effectively starts the consumer connection
   */
-  pub(crate) fn send_forward_open(&mut self, setup_stream: &mut SetupStream, session_handle: u32) -> Result<u32> {
+  pub(crate) fn send_forward_open(&mut self, setup_stream: &mut SetupStream, session_handle: u32, slot: u8) -> Result<u32> {
     // Send forward open and get response
-    let msg = eip::build_forward_open_packet(session_handle, &self.hint);
+    let msg = eip::build_forward_open_packet(slot, session_handle, &self.hint);
     let response = setup_stream.send_recieve(&msg.as_slice()).unwrap();
 
     // Check response

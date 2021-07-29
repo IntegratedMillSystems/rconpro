@@ -4,6 +4,7 @@ use std::time::Duration;
 use std::hash::Hash;
 use std::cmp::Eq;
 use byteorder::{ReadBytesExt, LittleEndian};
+use serde::{Deserialize, Serialize};
 
 // CIP/EIP protocol constants
 const SETUP_PORT: u16 = 44818;
@@ -26,7 +27,7 @@ Debug:                  print its value
 Hash, PartialEq, Eq:    use as a key for a hashmap
 Copy, Clone:            automatically clone when needed
 */
-#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone, Deserialize, Serialize)]
 pub struct EipAddr {
   pub addr: IpAddr,
   pub slot: u8,

@@ -61,7 +61,7 @@ impl Plc {
   */
   pub(crate) fn add_consumer(&mut self, hint: ConsumerHint, queue: &Arc<ConsumerQueue>) -> (&Consumer, u32) {
     let mut con = Consumer::new(hint, queue);
-    let to_connection_id = con.send_forward_open(&mut self.setup_stream, self.session_handle)
+    let to_connection_id = con.send_forward_open(&mut self.setup_stream, self.session_handle, self.addr.slot)
       .unwrap();
 
     self.consumers.insert(

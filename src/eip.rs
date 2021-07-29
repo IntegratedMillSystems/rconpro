@@ -54,9 +54,9 @@ fn test_build_register_session() {
 
 
 /* Create Forward Open */
-pub fn build_forward_open_packet(session_handle: u32, hint: &ConsumerHint) -> Vec<u8>{
+pub fn build_forward_open_packet(slot: u8, session_handle: u32, hint: &ConsumerHint) -> Vec<u8>{
   // Get bytes
-  let mut forward_open = build_cip_forward_open(hint);
+  let mut forward_open = build_cip_forward_open(slot, hint);
   let mut header = build_eip_send_rr_data_header(
     forward_open.len().try_into().unwrap(),
     session_handle
@@ -113,7 +113,7 @@ fn test_build_eip_send_rr_data_header() {
 }
 
 
-fn build_cip_forward_open(hint: &ConsumerHint) -> Vec<u8> {
+fn build_cip_forward_open(slot: u8, hint: &ConsumerHint) -> Vec<u8> {
   const CIP_SERVICE: u8 = 0x54;
   const CIP_PATH_SIZE: u8 = 0x02;
   const CIP_CLASS_TYPE: u8 = 0x20;
@@ -163,7 +163,7 @@ fn build_cip_forward_open(hint: &ConsumerHint) -> Vec<u8> {
   forward_open.write_u8(CIP_TRANSPORT_TRIGGER).unwrap();
 
   // Add the connection path
-  let mut path = build_connection_path(hint);
+  let mut path = build_connection_path(slot, hint);
   forward_open.write_u8( (path.len()/2).try_into().unwrap() ).unwrap();
   forward_open.append(&mut path);
 
@@ -171,9 +171,9 @@ fn build_cip_forward_open(hint: &ConsumerHint) -> Vec<u8> {
 }
 
 
-fn build_connection_path(hint: &ConsumerHint) -> Vec<u8> {
+fn build_connection_path(slot: u8, hint: &ConsumerHint) -> Vec<u8> {
   const PORT_SEGMENT: u8 = 0x01;
-  const LINK_ADDRESS: u8 = 0x00;
+  let LINK_ADDRESS = slot;
   const KEY_SEGMENT: u8 = 0x34;
   const KEY_FORMAT: u8 = 0x04;
   const VENDOR_ID: u16 = 0x00;
@@ -211,7 +211,7 @@ fn test_build_connection_path() {
   };
 
   assert_eq!(
-    build_connection_path(&hint),
+    build_connection_path(0, &hint),
     vec![1, 0, 52, 4, 0, 0, 0, 0, 0, 0, 0, 0, 145, 4, 84, 101, 115, 116]
   );
 }
